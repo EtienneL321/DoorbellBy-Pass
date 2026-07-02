@@ -1,17 +1,18 @@
 #pragma once
 
 // Telegram bot: command handling, ring notifications, chat-ID allowlist.
-namespace Bot {
+namespace Bot
+{
 
-void begin();
+    void begin();
 
-// Call every loop() iteration; internally rate-limited to avoid hammering
-// the Telegram API.
-void update();
+    // Call every loop() iteration; internally rate-limited to avoid hammering
+    // the Telegram API.
+    void update();
 
-// Ring notification with an inline "Open Door" button.
-void sendRingAlert();
+    // Ring notification with an inline "Open Door" button.
+    void sendRingAlert();
 
-void sendLowBatteryAlert();
+    void sendLowBatteryAlert();
 
-}  // namespace Bot
+} // namespace Bot

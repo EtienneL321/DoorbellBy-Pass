@@ -3,34 +3,35 @@
 ## Progress
 
 Check off each phase as it completes and commit — git history then doubles as
-a project log. Each phase's *"Done when"* criteria (below) define completion.
+a project log. Each phase's _"Done when"_ criteria (below) define completion.
 
 - [ ] **Phase 0** — Discovery: intercom measured, assumptions confirmed
-  *(buzzer AC/DC still needs a recheck — only blocks Phase 4 wiring, not
-  Phase 1 ordering; see below)*
+      _(buzzer AC/DC still needs a recheck — only blocks Phase 4 wiring, not
+      Phase 1 ordering; see below)_
 - [ ] **Phase 1** — Parts ordered and received
-  *(all ordered; on hand now: ESP32 dev board, relay module, resistor
-  assortment kit, breadboard + jumper wires. In transit via Amazon/Digikey,
-  expected next week: DFPlayer Mini, speaker, PC817 optocoupler, bridge
-  rectifier + cap, 18650 holder, MT3608 boost converter, switch. Enough on
-  hand to start Phase 2 steps 1–4 — WiFi/Telegram bring-up and relay
-  test — before the rest arrives.)*
+      _(all ordered; on hand now: ESP32 dev board, relay module, resistor
+      assortment kit, breadboard + jumper wires. In transit via Amazon/Digikey,
+      expected next week: DFPlayer Mini, speaker, PC817 optocoupler, bridge
+      rectifier + cap, 18650 holder, MT3608 boost converter, switch. Enough on
+      hand to start Phase 2 steps 1–4 — WiFi/Telegram bring-up and relay
+      test — before the rest arrives.)_
 - [ ] **Phase 2** — Bench prototype: full loop works with simulated ring
-  *(in progress — PlatformIO project + full firmware written: config, door,
-  ring, chime, battery, bot modules, see src/. Untested against real
-  hardware/build yet — no PlatformIO toolchain available to compile-check
-  while writing it. Testable today with on-hand parts: WiFi/Telegram
-  bring-up (no hardware needed beyond the ESP32), relay open via `/open`
-  or the notification button, and the full ring→notify→button→door flow by
-  jumpering GPIO27 to GND to fake a ring — see chat for exact steps. Chime
-  and battery reads safely no-op/read garbage until their hardware arrives
-  next week.)*
+      _(in progress — PlatformIO project + full firmware written: config, door,
+      ring, chime, battery, bot modules, see src/. Untested against real
+      hardware/build yet — no PlatformIO toolchain available to compile-check
+      while writing it. Testable today with on-hand parts: WiFi/Telegram
+      bring-up (no hardware needed beyond the ESP32), relay open via `/open`
+      or the notification button, and the full ring→notify→button→door flow by
+      jumpering GPIO27 to GND to fake a ring — see chat for exact steps. Chime
+      and battery reads safely no-op/read garbage until their hardware arrives
+      next week.)_
 - [ ] **Phase 3** — Firmware complete: all commands, ring flow, robustness
 - [ ] **Phase 4** — Final circuit built in enclosure
 - [ ] **Phase 5** — Installed at the callbox
 - [ ] **Phase 6** — All verification checks pass
 
 **Key measurements from Phase 0** (fill in — later phases depend on these):
+
 - Buzzer signal: `18 V`, `AC / DC — TBD`: set multimeter explicitly to AC volts
   and remeasure while someone presses the button; ~0V there but 18V on DC
   means DC, and vice versa. This value sizes the Phase 4 rectifier/resistor —
@@ -79,8 +80,10 @@ chime hardware) were resolved through discussion — see Design decisions.
 ## Background knowledge
 
 ### How old apartment intercoms work
+
 Most pre-2000s buildings use a simple analog multi-wire system. Each unit's
 wall station has (at minimum):
+
 - A **door-release button**: pressing it closes a circuit that energizes the
   building door's electric strike. It's usually a simple dry contact — two
   wires that get shorted together while pressed.
@@ -88,8 +91,8 @@ wall station has (at minimum):
   panel puts a voltage (typically 9–24V, **either AC or DC** depending on the
   system) across your buzzer's two wires for as long as they hold the button.
 
-That's the whole interface we need: *short two wires to open the door; detect
-voltage on two other wires to know someone rang.* Everything is low-voltage —
+That's the whole interface we need: _short two wires to open the door; detect
+voltage on two other wires to know someone rang._ Everything is low-voltage —
 no mains inside the callbox — but measure before touching (Phase 0).
 
 **Caveat:** a minority of systems (mostly newer) are digital/multiplexed, where
@@ -97,17 +100,20 @@ the button sends a coded signal instead of a dry contact. Phase 0 includes a
 test to rule this out before buying parts.
 
 ### ESP32
+
 A ~$8 WiFi microcontroller board (~25×50mm), programmed in C++ via
 Arduino/PlatformIO. 3.3V logic — its GPIO pins must never see the intercom's
 9–24V directly, which is why both interfaces below are isolated. Runs the
 firmware: WiFi, Telegram polling, relay timing, ring detection, chime playback.
 
 ### Relay module (door open)
+
 An opto-isolated 1-channel 3.3V relay board (~$2). Its output contacts wire in
 parallel with the existing door button — closing the relay is electrically
 identical to pressing the button. The ESP32 energizes it for N seconds.
 
 ### Optocoupler input (ring detection)
+
 A PC817 optocoupler (~$0.20) electrically isolates the intercom's buzzer
 voltage from the ESP32. Buzzer voltage lights the opto's internal LED (through
 a current-limiting resistor); the output side pulls an ESP32 GPIO low. If the
@@ -116,11 +122,13 @@ capacitor in front so the opto sees steady DC. The exact resistor value depends
 on the voltage measured in Phase 0.
 
 ### DFPlayer Mini (chime)
+
 A ~$3 module that plays MP3s from a microSD card and drives a small 4Ω/3W
 speaker directly. The ESP32 commands it over serial UART ("play track 1").
 Any melody = any MP3 you load on the card.
 
 ### Telegram Bot API
+
 Create a bot via @BotFather (free, 2 minutes) → get a token. The ESP32 uses
 the `UniversalTelegramBot` Arduino library to **long-poll** Telegram's servers
 (outbound HTTPS only — works behind any router/NAT with no setup). The bot can
@@ -129,6 +137,7 @@ Door") and receive your commands (`/open`, `/duration 7`, `/status`). Security
 comes from allowlisting your Telegram chat ID — the bot ignores everyone else.
 
 ### ESP32 Preferences (NVS)
+
 Built-in key-value flash storage. Persists the configured door-hold duration
 (and mute flag) across power cycles.
 
@@ -148,7 +157,7 @@ Built-in key-value flash storage. Persists the configured door-hold duration
    isolated, reliable digital signal. Rejected: microphone/vibration sensor
    listening for the buzz (non-invasive but false-triggers and misses rings).
 
-4. **Ecosystem: custom ESP32 firmware + Telegram bot** — *Chosen by user.*
+4. **Ecosystem: custom ESP32 firmware + Telegram bot** — _Chosen by user._
    Why: $0/month, no always-on hub, works from anywhere with outbound-only
    connections, and the firmware is a well-scoped DIY project. Rejected:
    ESPHome + Home Assistant (most polished daily UX but requires a hub device
@@ -161,13 +170,13 @@ Built-in key-value flash storage. Persists the configured door-hold duration
    alternative if Telegram polling latency (~1–4s) ever grates.
 
 6. **Chime: DFPlayer Mini + small speaker; original buzzer disconnected** —
-   *Chosen by user.* Why: plays any MP3, real audio quality, $3. The original
+   _Chosen by user._ Why: plays any MP3, real audio quality, $3. The original
    buzzer's wires are labeled and capped, not cut — reconnectable anytime.
    Rejected: ESP32-generated piezo tones (simpler but chiptune-quality);
    phone-notification-only (misses rings when phone is silent).
 
-7. **Power: single 18650 Li-ion cell, hot-swappable** — *Chosen by user after
-   Phase 0 found no outlet near the callbox.* A 3.7V→5V boost converter
+7. **Power: single 18650 Li-ion cell, hot-swappable** — _Chosen by user after
+   Phase 0 found no outlet near the callbox._ A 3.7V→5V boost converter
    (e.g. MT3608) feeds the ESP32/relay/DFPlayer rail; the cell sits in a
    holder with no charging circuitry inside the enclosure. Why: smallest and
    simplest build (requirement 5) — no charge-controller IC, no exposed port,
@@ -192,8 +201,8 @@ Built-in key-value flash storage. Persists the configured door-hold duration
      voltage; below ~3.5V the firmware sends one Telegram warning so a swap
      happens before the device goes dark (important since R1 requires the
      device to be reachable while you're away).
-   Expect to establish a real swap cadence empirically in Phase 6 rather than
-   trusting the estimate above.
+     Expect to establish a real swap cadence empirically in Phase 6 rather than
+     trusting the estimate above.
 
 8. **Security posture** — Telegram chat-ID allowlist (bot ignores all other
    users); bot token + WiFi credentials in a git-ignored `secrets.h`; firmware
@@ -202,7 +211,8 @@ Built-in key-value flash storage. Persists the configured door-hold duration
 ## Implementation steps
 
 ### Phase 0 — Discovery: understand your specific intercom
-*Goal: confirm the analog assumptions and get the numbers that size two components.*
+
+_Goal: confirm the analog assumptions and get the numbers that size two components._
 
 1. Power nothing off yet — take photos of the callbox exterior, then open it
    (usually 1–2 screws) and photograph the wiring before touching anything.
@@ -220,27 +230,28 @@ Built-in key-value flash storage. Persists the configured door-hold duration
 5. Check WiFi signal strength at the callbox location with your phone.
 6. Note available power: is there an outlet within cable reach?
 
-*Done when:* you know button = dry contact, buzzer voltage/type, WiFi is
+_Done when:_ you know button = dry contact, buzzer voltage/type, WiFi is
 adequate, and power is available.
 
 ### Phase 1 — Parts (~$25 total)
 
-| Part | ~Price | Purpose |
-|---|---|---|
-| ESP32 dev board (ESP32-WROOM DevKit) | $8 | Brain |
-| 1-ch 3.3V opto-isolated relay module | $2 | Door open |
-| PC817 optocoupler + resistor assortment kit | $1 | Ring detect |
-| Bridge rectifier (e.g. DB107) + 10–47µF cap | $1 | Ring detect — buy regardless of AC/DC; costs $1 either way and only gets installed if the recheck confirms AC (harmless to have on hand if not needed) |
-| DFPlayer Mini + microSD card (any small one) | $5 | Chime |
-| 4Ω 3W mini speaker | $3 | Chime |
-| 18650 cell holder (single, with leads) | $2 | Power — use your existing 18650s |
-| MT3608 boost converter (3.7V→5V) module | $2 | Power |
-| Small SPST slide/toggle switch | $1 | Power on/off (swap safety) |
-| Resistors for battery voltage divider (2x, e.g. 100kΩ+100kΩ) | — | Low-battery ADC sense |
-| Breadboard + jumper wires (prototyping) | — | Likely already owned |
-| Small project box / 3D-printed enclosure | $0–5 | Requirement 5 |
+| Part                                                         | ~Price | Purpose                                                                                                                                                |
+| ------------------------------------------------------------ | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ESP32 dev board (ESP32-WROOM DevKit)                         | $8     | Brain                                                                                                                                                  |
+| 1-ch 3.3V opto-isolated relay module                         | $2     | Door open                                                                                                                                              |
+| PC817 optocoupler + resistor assortment kit                  | $1     | Ring detect                                                                                                                                            |
+| Bridge rectifier (e.g. DB107) + 10–47µF cap                  | $1     | Ring detect — buy regardless of AC/DC; costs $1 either way and only gets installed if the recheck confirms AC (harmless to have on hand if not needed) |
+| DFPlayer Mini + microSD card (any small one)                 | $5     | Chime                                                                                                                                                  |
+| 4Ω 3W mini speaker                                           | $3     | Chime                                                                                                                                                  |
+| 18650 cell holder (single, with leads)                       | $2     | Power — use your existing 18650s                                                                                                                       |
+| MT3608 boost converter (3.7V→5V) module                      | $2     | Power                                                                                                                                                  |
+| Small SPST slide/toggle switch                               | $1     | Power on/off (swap safety)                                                                                                                             |
+| Resistors for battery voltage divider (2x, e.g. 100kΩ+100kΩ) | —      | Low-battery ADC sense                                                                                                                                  |
+| Breadboard + jumper wires (prototyping)                      | —      | Likely already owned                                                                                                                                   |
+| Small project box / 3D-printed enclosure                     | $0–5   | Requirement 5                                                                                                                                          |
 
 ### Phase 2 — Bench prototype (no intercom involved)
+
 1. Create the PlatformIO project in this repo (`platformio.ini`, `src/main.cpp`);
    add `UniversalTelegramBot`, `ArduinoJson`, `DFRobotDFPlayerMini` deps.
 2. Add `include/secrets.h` (WiFi creds, bot token, chat ID) and git-ignore it;
@@ -251,10 +262,12 @@ adequate, and power is available.
 6. Simulate a ring: jumper the opto input GPIO → bot sends notification with
    inline "Open Door" button; tapping it fires the relay; melody plays.
 
-*Done when:* the full loop works end-to-end on the bench with a simulated ring.
+_Done when:_ the full loop works end-to-end on the bench with a simulated ring.
 
 ### Phase 3 — Firmware (the real build)
+
 Suggested structure:
+
 ```
 src/main.cpp          — setup + loop
 src/door.{h,cpp}      — relay control: openDoor(seconds), non-blocking timer
@@ -264,7 +277,9 @@ src/bot.{h,cpp}       — Telegram: polling, command routing, chat-ID allowlist
 src/config.{h,cpp}    — Preferences: duration (default 5s, max 30s), mute
 src/battery.{h,cpp}   — ADC read + divider math, low-battery threshold check
 ```
+
 Behavior:
+
 - **On ring:** debounced rising edge → play melody (unless muted) → send
   Telegram message "🔔 Someone's at the door" with inline `[Open Door]` button.
   Rate-limit notifications (e.g. max 1 per 10s) so a held button doesn't spam.
@@ -279,10 +294,11 @@ Behavior:
 - **Robustness:** WiFi auto-reconnect; relay defaults open (door NOT held) on
   boot/crash; watchdog reset.
 
-*Done when:* all commands work; ring → notification latency under ~5s; device
+_Done when:_ all commands work; ring → notification latency under ~5s; device
 recovers from WiFi drop and power cycle without losing settings.
 
 ### Phase 4 — Input conditioning + final circuit
+
 1. Build the ring-detect front end per Phase 0 measurements: series resistor
    sized for the measured voltage (target ~10–20mA through the PC817 LED);
    bridge rectifier + cap first if AC.
@@ -293,6 +309,7 @@ recovers from WiFi drop and power cycle without losing settings.
    solder-free at the callbox end.
 
 ### Phase 5 — Install
+
 1. Power down nothing (intercom stays live — it's low voltage; just avoid
    shorting stray wires).
 2. Connect relay terminals in parallel with the button wires; connect the opto
@@ -304,8 +321,9 @@ recovers from WiFi drop and power cycle without losing settings.
 4. End-to-end test with a helper (see Phase 6).
 
 ### Phase 6 — Verification (maps to requirements)
+
 - [ ] **R1:** `/open` and the notification's "Open Door" button release the
-      building door — tested on WiFi *and* on mobile data (away simulation).
+      building door — tested on WiFi _and_ on mobile data (away simulation).
 - [ ] **R2:** Helper presses unit button outside → phone notification within ~5s.
 - [ ] **R3:** `/duration 10` → door verifiably stays released ~10s; setting
       survives a power cycle.

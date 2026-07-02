@@ -10,46 +10,54 @@
 #include "ring.h"
 #include "secrets.h"
 
-namespace {
+namespace
+{
 
-void connectWiFi() {
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.print("Connecting to WiFi");
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(250);
-    Serial.print('.');
+  void connectWiFi()
+  {
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    Serial.print("Connecting to WiFi");
+    while (WiFi.status() != WL_CONNECTED)
+    {
+      delay(250);
+      Serial.print('.');
+    }
+    Serial.println();
+    Serial.print("Connected, IP: ");
+    Serial.println(WiFi.localIP());
+
+    // Stay associated (so we don't miss a ring or a command) but sleep the
+    // radio between beacons to cut average power draw. If this call fails to
+    // compile against your installed arduino-esp32 core version, use
+    // WiFi.setSleep(true) instead - simpler, slightly less power savings.
+    esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
   }
-  Serial.println();
-  Serial.print("Connected, IP: ");
-  Serial.println(WiFi.localIP());
 
-  // Stay associated (so we don't miss a ring or a command) but sleep the
-  // radio between beacons to cut average power draw. If this call fails to
-  // compile against your installed arduino-esp32 core version, use
-  // WiFi.setSleep(true) instead - simpler, slightly less power savings.
-  esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
-}
-
-void handleRing() {
-  if (!Config::isMuted()) {
-    Chime::play(Config::getChimeTrack());
+  void handleRing()
+  {
+    if (!Config::isMuted())
+    {
+      Chime::play(Config::getChimeTrack());
+    }
+    Bot::sendRingAlert();
   }
-  Bot::sendRingAlert();
-}
 
-void checkBattery() {
-  static bool wasLow = false;
-  bool isLow = Battery::isLow();
-  if (isLow && !wasLow) {
-    Bot::sendLowBatteryAlert();
+  void checkBattery()
+  {
+    static bool wasLow = false;
+    bool isLow = Battery::isLow();
+    if (isLow && !wasLow)
+    {
+      Bot::sendLowBatteryAlert();
+    }
+    wasLow = isLow;
   }
-  wasLow = isLow;
-}
 
-}  // namespace
+} // namespace
 
-void setup() {
+void setup()
+{
   Serial.begin(115200);
 
   Config::begin();
@@ -66,7 +74,8 @@ void setup() {
   Serial.println("Doorbell ready.");
 }
 
-void loop() {
+void loop()
+{
   Ring::update();
   Door::update();
   Bot::update();
